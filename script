@@ -3,4 +3,4 @@ PYTHONPATH=/home/lottarini/DBMESH/db-mesh python /home/lottarini/DBMESH/db-mesh/
 PYTHONPATH=/home/lottarini/DBMESH/db-mesh python /home/lottarini/DBMESH/db-mesh/sql_compiler/runtime.py query_plan --schedule 0
 cp out golden
 /home/lottarini/DBMESH/db-mesh/runtime query_plan
-diff -wB out golden
+diff -wB out golden && echo "SUCCESS!" || echo "FAILURE FOR QUERY $1"
