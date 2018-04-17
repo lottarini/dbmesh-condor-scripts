@@ -1,0 +1,6 @@
+#!/bin/bash
+PYTHONPATH=/home/lottarini/DBMESH/db-mesh python /home/lottarini/DBMESH/db-mesh/sql_compiler/main.py /home/lottarini/DBMESH/queries/tpch-sf001/$1.sql
+PYTHONPATH=/home/lottarini/DBMESH/db-mesh python /home/lottarini/DBMESH/db-mesh/sql_compiler/runtime.py query_plan --schedule 0
+cp out golden
+/home/lottarini/DBMESH/db-mesh/runtime query_plan
+diff -wB out golden

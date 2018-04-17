@@ -1,0 +1,66 @@
+executable = ./script
+universe = vanilla
+output = main.out                                                                                                   
+error = main.err
+log = main.log
+getenv = True
+
+##### REPLACE STUFF STARTING FROM HERE ###########
+initial_dir = 1
+arguments = 01
+queue
+initial_dir = 2
+arguments = 02
+queue
+initial_dir = 3
+arguments = 03
+queue
+initial_dir = 4
+arguments = 04
+queue
+initial_dir = 5
+arguments = 05
+queue
+initial_dir = 6
+arguments = 06
+queue
+initial_dir = 7
+arguments = 07
+queue
+initial_dir = 8
+arguments = 08
+queue
+initial_dir = 9
+arguments = 09
+queue
+initial_dir = 10
+arguments = 10
+queue
+initial_dir = 11
+arguments = 11
+queue
+initial_dir = 12
+arguments = 12
+queue
+initial_dir = 14
+arguments = 14
+queue
+initial_dir = 16
+arguments = 16
+queue
+initial_dir = 17
+arguments = 17
+queue
+initial_dir = 18
+arguments = 18
+queue
+initial_dir = 19
+arguments = 19
+queue
+initial_dir = 20
+arguments = 20
+queue
+initial_dir = 22
+arguments = 22
+queue
+
