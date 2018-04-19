@@ -1,6 +1,12 @@
 #!/bin/bash
+if [ -z $SF001_TABLES ]; then
+	echo "SET SF001_TABLES ENV VARIABLE" 1>&2
+	echo "export SF001_TABLES=~/DBMESH/tables" 1>&2
+	exit 1
+fi
 PYTHONPATH=/home/lottarini/DBMESH/db-mesh python /home/lottarini/DBMESH/db-mesh/sql_compiler/main.py /home/lottarini/DBMESH/queries/tpch-sf001/$1.sql
 PYTHONPATH=/home/lottarini/DBMESH/db-mesh python /home/lottarini/DBMESH/db-mesh/sql_compiler/runtime.py query_plan --schedule 0
-cp out golden
+mv out golden
+# add --check if you want
 /home/lottarini/DBMESH/db-mesh/runtime query_plan
 diff -wB out golden && echo "SUCCESS!" || echo "FAILURE FOR QUERY $1"

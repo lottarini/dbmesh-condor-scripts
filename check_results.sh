@@ -1,8 +1,6 @@
 #!/bin/bash
-if [ -d $1 ]; then
-	cd $1
-	find . -name main.out -exec ls -ltha \{\} \; -exec tail -1 \{\} \;
-	cd ..
+if [ "$#" -eq 1 ] && [ -d $1 ]; then
+	find $1 -name main.out -exec ls -ltha \{\} \; -exec tail -1 \{\} \; -exec echo "" \;
 else
-	echo "$1 is not a directory"
+	echo "pass a valid directory path"
 fi
