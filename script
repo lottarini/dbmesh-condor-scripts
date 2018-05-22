@@ -6,7 +6,9 @@ if [ -z $SF001_TABLES ]; then
 fi
 PYTHONPATH=/home/lottarini/DBMESH/db-mesh python /home/lottarini/DBMESH/db-mesh/sql_compiler/main.py /home/lottarini/DBMESH/queries/tpch-sf001/$1.sql
 PYTHONPATH=/home/lottarini/DBMESH/db-mesh python /home/lottarini/DBMESH/db-mesh/sql_compiler/runtime.py query_plan --schedule 0
+rm -f stats
+rm -f query_plan_*
 mv out golden
 # add --check if you want
-/home/lottarini/DBMESH/db-mesh/runtime query_plan
+/home/lottarini/DBMESH/db-mesh/runtime query_plan --check
 diff -wB out golden && echo "SUCCESS!" || echo "FAILURE FOR QUERY $1"
