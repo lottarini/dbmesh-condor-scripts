@@ -76,6 +76,11 @@ def get_inst_per_directive(stat_file):
 def get_utilization(d, width, height):
     out = []
     print "\n",d
+    
+    out_utilization = []
+    out_scheduled = []
+    out_latency = []
+    
     for i in range(1,23):
         ideal_directive_latency = []
         tiles_used   = []
@@ -85,7 +90,7 @@ def get_utilization(d, width, height):
         if os.path.isfile(out_file) and os.path.isfile(stat_file) and succesful(out_file):
             ideal_directive_latency = get_directive_latencies(stat_file)
             tiles_used = get_tiles_used(stat_file)
-            insts_used = get_inst_per_directive(stat_file)
+            insts_scheduled = get_inst_per_directive(stat_file)
             # with open(stat_file) as f:
             #     for stat_line in f:
             #         if re.search("Area",stat_line):
@@ -96,17 +101,26 @@ def get_utilization(d, width, height):
             #             #ideal_directive_latency.append(float(values[2]))
                         
             total_latency = sum(ideal_directive_latency)
-            max_utilization = float(width) * float(height)
-            dir_utilization = [ x / max_utilization for x in tiles_used ]
+            tiles_in_device = float(width) * float(height)
+            dir_utilization = [ x / tiles_in_device for x in tiles_used ]
             
             # summation over all directives
             utilization = sum([ u * ( v / total_latency ) for u,v in zip(dir_utilization, ideal_directive_latency)] )
-            print i,dir_utilization,utilization
-            out.append( utilization )
-        else:
-            out.append(0)
+            avg_insts_scheduled = sum([ inst_used * (directive_time/total_latency) for inst_used,directive_time in zip(insts_scheduled,ideal_directive_latency)])
             
-    return out
+            print i,dir_utilization,utilization
+            print i,insts_scheduled,avg_insts_scheduled
+            
+            out_utilization.append( utilization )
+            out_scheduled.append(avg_insts_scheduled)
+            out_latency.append(total_latency)
+        else:
+            out_utilization.append( 0 )
+            out_scheduled.append(0)
+            out_latency.append(0)
+            
+    return out_utilization, out_scheduled, out_latency
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -120,26 +134,37 @@ if __name__ == "__main__":
     labels = args.labels if args.labels is not None else args.directories
     #assert len(labels) == len(args.directories)
     # create plot
-    fig, ax = plt.subplots()
+    fig1, ax1 = plt.subplots()
+    fig2, ax2 = plt.subplots()
     bar_width = (1.0/(len(args.directories)-1) - 0.05)
 
-    ref_latency = get_latencies(args.directories[0])
-    ref_utilization = get_utilization(args.directories[0],args.width,args.height)
+    #ref_latency = get_latencies(args.directories[0])
+    ref_utilization, ref_schedules, ref_latency = get_utilization(args.directories[0],args.width,args.height)
     for j,d in enumerate(args.directories[1:]):
         assert os.path.isdir(d)
 
-        latencies   = get_latencies(d)
-        utilization = get_utilization(d,args.width,args.height)
+        #latencies   = get_latencies(d)
+        utilization, schedules, latencies = get_utilization(d,args.width,args.height)
        
         # plt.scatter( utilization , [ x/y if y != 0 else 0 for x,y in zip(ref_latency,latencies)] , color = colors[j], label=labels[j] , marker=markers[j])
-        plt.scatter( [ x/y if y != 0 else 0 for x,y in zip(utilization,ref_utilization)] , [ x/y if y != 0 else 0 for x,y in zip(ref_latency,latencies)] , color = colors[j], label=labels[j] , marker=markers[j])
+        ax1.scatter( [ x/y if y != 0 else 0 for x,y in zip(utilization,ref_utilization)] , [ x/y if y != 0 else 0 for x,y in zip(ref_latency,latencies)] , color = colors[j], label=labels[j] , marker=markers[j])
+        ax2.scatter([ x/y if y != 0 else 0 for x,y in zip(schedules,ref_schedules)] , [ x/y if y != 0 else 0 for x,y in zip(ref_latency,latencies)] , color = colors[j], label=labels[j] , marker=markers[j])
+            
+    ax1.set_ylabel('Speedup over Serial')
+    ax1.set_xlabel('Utilization Speedup over Serial')
+    ax2.set_ylabel('Speedup over Serial')
+    ax2.set_xlabel('Inst Scheduled per Directive (ratio)')
 
-    plt.ylabel('Speedup over Serial')
-    plt.xlabel('Utilization Speedup over Serial')
-    plt.legend()
-    plt.tight_layout()
-    plt.ylim(ymin=0)
-    plt.axvline(x=1)
-    plt.axhline(y=1)
+    ax1.legend()
+    ax2.legend()
+    
+    ax1.set_ylim(ymin=0)
+    ax2.set_ylim(ymin=0)
+    
+    ax2.axvline(x=1)
+    ax2.axhline(y=1)
+    ax1.axvline(x=1)
+    ax1.axhline(y=1)
 
-    fig.savefig('normalized_speedup.png')
+    fig1.savefig('utilization_speedup.png')
+    fig2.savefig('inst_scheduled_speedup.png')
