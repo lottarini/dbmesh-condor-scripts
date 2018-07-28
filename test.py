@@ -22,6 +22,57 @@ def succesful(out_file):
 
 colors = ['r','g','b']
 markers = ['o','*','d']
+
+def get_tiles_used(stat_file):
+    ''' Given an opened stat file extract the number of tiles used per directive 
+
+    Returns:
+    	a # directives long list of utilization
+    '''
+    tiles_used = []
+    with open(stat_file) as f:
+        for stat_line in f:
+            if re.search("Area",stat_line):
+                continue
+            values = stat_line.split(",")
+            if (values[1] == "DIRECTIVE"):                            
+                tiles_used.append(float(values[6]))
+            
+    return tiles_used
+
+def get_directive_latencies(stat_file):
+    ''' Given an opened stat file extract the latency of a directive 
+
+    Returns:
+    	a # directives long list of tiles used
+    '''
+    ideal_directive_latencies = []
+    with open(stat_file) as f:
+        for stat_line in f:
+            if re.search("Area",stat_line):
+                continue
+            values = stat_line.split(",")
+            if (values[1] == "DIRECTIVE"):                            
+                ideal_directive_latencies.append(float(values[2]))
+                
+    return ideal_directive_latencies
+
+def get_inst_per_directive(stat_file):
+    inst_per_directive = []
+    inst_count = 0
+    with open(stat_file) as f:
+        for stat_line in f:
+            if re.search("Area",stat_line):
+                continue
+            values = stat_line.split(",")
+            if (values[1] == "Tile"):
+                inst_count += 1
+            if (values[1] == "DIRECTIVE"):
+                inst_per_directive.append(inst_count)
+                inst_count = 0
+
+    return inst_per_directive
+
 def get_utilization(d, width, height):
     out = []
     print "\n",d
@@ -32,17 +83,20 @@ def get_utilization(d, width, height):
         out_file  = os.path.join(d,str(i),"main.out")
         stat_file = os.path.join(d,str(i),"stats")
         if os.path.isfile(out_file) and os.path.isfile(stat_file) and succesful(out_file):
-            with open(stat_file) as f:
-                for stat_line in f:
-                    if re.search("Area",stat_line):
-                        continue
-                    values = stat_line.split(",")
-                    if (values[1] == "DIRECTIVE"):                            
-                        tiles_used.append(float(values[-2]))
-                        ideal_directive_latency.append(float(values[2]))
-
-                total_latency = sum(ideal_directive_latency)
-                max_utilization = float(width) * float(height)
+            ideal_directive_latency = get_directive_latencies(stat_file)
+            tiles_used = get_tiles_used(stat_file)
+            insts_used = get_inst_per_directive(stat_file)
+            # with open(stat_file) as f:
+            #     for stat_line in f:
+            #         if re.search("Area",stat_line):
+            #             continue
+            #         values = stat_line.split(",")
+            #         if (values[1] == "DIRECTIVE"):                            
+            #             tiles_used.append(float(values[-2]))
+            #             #ideal_directive_latency.append(float(values[2]))
+                        
+            total_latency = sum(ideal_directive_latency)
+            max_utilization = float(width) * float(height)
             dir_utilization = [ x / max_utilization for x in tiles_used ]
             
             # summation over all directives
@@ -84,6 +138,8 @@ if __name__ == "__main__":
     plt.xlabel('Utilization Speedup over Serial')
     plt.legend()
     plt.tight_layout()
-    plt.ylim(ymin=1)
+    plt.ylim(ymin=0)
+    plt.axvline(x=1)
+    plt.axhline(y=1)
 
     fig.savefig('normalized_speedup.png')
