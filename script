@@ -8,7 +8,23 @@ PYTHONPATH=/home/lottarini/DBMESH/db-mesh python /home/lottarini/DBMESH/db-mesh/
 PYTHONPATH=/home/lottarini/DBMESH/db-mesh python /home/lottarini/DBMESH/db-mesh/sql_compiler/runtime.py query_plan --schedule 0
 rm -f stats
 rm -f query_plan_*
-mv out golden
+
+if [ $1 -eq 17 ]; then
+	echo "0.00" > golden
+elif [ $1 -eq 9 ]; then
+	python ../cut.py out > golden
+else 
+	mv out golden
+fi
+
 # add --check if you want
-/home/lottarini/DBMESH/db-mesh/runtime query_plan --check
+# --magic-conv --width --height for DSE
+/home/lottarini/DBMESH/db-mesh/runtime query_plan --magic-conv --width $2 --height $3 --schedule $4
+
+if [ $1 -eq 9 ]; then
+	python ../cut.py out > tmp
+	mv tmp out
+fi
+
 diff -wB out golden && echo "SUCCESS!" || echo "FAILURE FOR QUERY $1"
+	

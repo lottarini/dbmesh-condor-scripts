@@ -8,7 +8,8 @@ assert os.path.isdir(sys.argv[1]) #directory where all folders are created
 This script will create a set of dirs 1-22 in folder sys.arg[1] 
 '''
 
-condor_scripts = [ "script", "condor.submit"]
+#condor_scripts = [ "script", "condor.submit"]
+condor_scripts = [ "condor.submit","cut.py"]
 
 for e in condor_scripts:
     assert os.path.isfile(e)
