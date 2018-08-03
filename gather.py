@@ -2,6 +2,11 @@ import os
 import re
 import sys
 import pdb
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import scipy.stats
 # sys.path.append(os.path.abspath('/home/lottarini/DBMESH/db-mesh/sql_compiler'))
 # from scheduling_analyzer_single import analyze_stats
 
@@ -13,7 +18,7 @@ if library == "synopsys":
     raise NotImplementedError
 elif library == "tsmc":
     dbmesh_core_area = 36897.120848 + 12111.1203
-    freq = 900
+    freq = 950
     router_static_pwr  = 0.000125
     router_dynamic_pwr = 0.000308
     dbmesh_static_pwr  = 0.000611
@@ -31,11 +36,11 @@ def get_latencies(d):
         stat_file = os.path.join(d,str(i),"stats")
         if os.path.isfile(stat_file):
             with open(stat_file) as f:
-                cc,tcc,ncc = analyze_stats(f)
+                ct, ccc, ncc = analyze_stats(f)
                     
-                latency.append( cc )
+                latency.append( ct )
                 noc_cycles.append(ncc)
-                compute_cycles.append(tcc)
+                compute_cycles.append(ccc)
                 #print "{:<4}\t{:>10}".format(i,cc)
         else:
             latency.append(0)
@@ -43,7 +48,7 @@ def get_latencies(d):
     return latency, compute_cycles, noc_cycles
 
 def analyze_stats(stat_file):
-
+    ''' Returns the completion time of the query, time spent in tiles, time spent in routers '''
     query_latency = 0
 
     tile_utilization = 0
@@ -60,7 +65,7 @@ def analyze_stats(stat_file):
 
             try:
                 tile_utilization +=  int(values[6])  * directive_latency
-                noc_utilization  +=  ( int(values[7]) + int(values[6]) )  * directive_latency # clock cycles in which the routers are active
+                noc_utilization  +=  ( int(values[7]) + int(values[6]) )* directive_latency # clock cycles in which the routers are active
             except:
                 noc_utilization  = 0
                 tile_utilization = 0
@@ -68,7 +73,8 @@ def analyze_stats(stat_file):
     return ( query_latency, tile_utilization, noc_utilization )
 
 if __name__ == "__main__":
-    
+
+    area_used = [[] for i in range(19)] # how much area is used for each query by the different systems
     for d in os.listdir("."):
         if len(sys.argv) == 2:
             assert sys.argv[1] in ["REAL","DUMB"]
@@ -82,24 +88,43 @@ if __name__ == "__main__":
             area  = width * depth * dbmesh_core_area
             latencies, tile_cycles, router_cycles = get_latencies(d)
             if latencies is not None:
+                latencies = [latencies[i-1] for i in working_queries] # so the geomean is not 0
+            if latencies is not None and 0 not in latencies:
+                cc_geomean = scipy.stats.gmean(latencies)
+                geomean = cc_geomean * float( 1.0 / float(freq * 1000) )
                 latency = sum(latencies) * float( 1.0 / float(freq * 1000) ) # normalize to ms instead of sec
                 if latency == 0:
                     continue
                     #pdb.set_trace()
-                if all([x>0 for x in tile_cycles]): # in some cases I re-ran a feq queries
+                if all([ x > 0 for x in tile_cycles]): # in some cases I re-ran a few queries so not all have utilization info
                     router_utilization = float(sum(router_cycles)) / sum(latencies)
                     tile_utilization   = float(sum(tile_cycles)) / sum(latencies)
+
                     assert router_utilization < width*depth
                     assert tile_utilization < width * depth
+                    for i in range(len(tile_cycles)):
+                        area_used[i].append(tile_cycles[i]/(float(width*depth)*latencies[i]))
+                    static_compute_pwr = width*depth*dbmesh_static_pwr
+                    dyn_compute_pwr    = dbmesh_dynamic_pwr * tile_utilization
+                    static_comm_pwr    = width*depth*router_static_pwr
+                    dynamic_comm_pwr   = router_utilization * router_dynamic_pwr
                 else:
                     router_utilization = 0
                     tile_utilization   = 0
-                    
-                static_compute_pwr = width*depth*dbmesh_static_pwr
-                dyn_compute_pwr    = dbmesh_dynamic_pwr * tile_utilization
-                static_comm_pwr    = width*depth*router_static_pwr
-                dynamic_comm_pwr   = router_utilization * router_dynamic_pwr
-                
-                print "{:>2} {:>2} {:>.2f} {} {} {} {} {} {} {}".format(width, depth, area, latency,
+
+                    static_compute_pwr = 0
+                    dyn_compute_pwr    = 0
+                    static_comm_pwr    = 0
+                    dynamic_comm_pwr   = 0
+
+                                    
+                print "{:>2} {:>2} {:>.2f} {} {} {} {} {} {} {} {}".format(width, depth, area, latency,
                                                                         tile_utilization,router_utilization,
-                                                                        static_compute_pwr, dyn_compute_pwr, static_comm_pwr, dynamic_comm_pwr)
+                                                                        static_compute_pwr, dyn_compute_pwr, static_comm_pwr, dynamic_comm_pwr, geomean)
+
+    fig,ax = plt.subplots()
+    ax.boxplot(area_used)
+    ax.set_ylabel('Average DbMesh Area Used [No load imbalance]')
+    ax.set_xlabel('Queries')
+    fig.savefig("dbmesh_used_no_inbalance.pdf")
+    
