@@ -1,12 +1,12 @@
 import sys
 import os
 import argparse
-sys.path.append(os.path.abspath('/home/lottarini/DBMESH/db-mesh/sql_compiler/tools'))
-sys.path.append(os.path.abspath('/home/lottarini/DBMESH/db-mesh/sql_compiler'))
-sys.path.append(os.path.abspath('/home/lottarini/DBMESH/db-mesh'))
+# sys.path.append(os.path.abspath('/home/lottarini/DBMESH/db-mesh/sql_compiler/tools'))
+# sys.path.append(os.path.abspath('/home/lottarini/DBMESH/db-mesh/sql_compiler'))
+# sys.path.append(os.path.abspath('/home/lottarini/DBMESH/db-mesh'))
 
-from utilization import analyze_stats
-from gather import get_latencies
+# from utilization import analyze_stats
+# from gather import get_latencies
 import numpy as np
 import matplotlib.pyplot as plt
 import re
@@ -108,8 +108,8 @@ def get_utilization(d, width, height):
             utilization = sum([ u * ( v / total_latency ) for u,v in zip(dir_utilization, ideal_directive_latency)] )
             avg_insts_scheduled = sum([ inst_used * (directive_time/total_latency) for inst_used,directive_time in zip(insts_scheduled,ideal_directive_latency)])
             
-            print i,dir_utilization,utilization
-            print i,insts_scheduled,avg_insts_scheduled
+            # print i,dir_utilization,utilization
+            # print i,insts_scheduled,avg_insts_scheduled
             
             out_utilization.append( utilization )
             out_scheduled.append(avg_insts_scheduled)
@@ -121,6 +121,12 @@ def get_utilization(d, width, height):
             
     return out_utilization, out_scheduled, out_latency
 
+
+def write_data(filename,ru,si,la):
+    with open(filename,'w') as f:
+        f.write("# utilization, scheduled insts, latency\n")
+        for r,s,l in zip(ru,si,la):
+            f.write("{},{},{}\n".format(r,s,l))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -140,12 +146,13 @@ if __name__ == "__main__":
 
     #ref_latency = get_latencies(args.directories[0])
     ref_utilization, ref_schedules, ref_latency = get_utilization(args.directories[0],args.width,args.height)
+    write_data("ref.out", ref_utilization, ref_schedules, ref_latency)
     for j,d in enumerate(args.directories[1:]):
         assert os.path.isdir(d)
 
         #latencies   = get_latencies(d)
         utilization, schedules, latencies = get_utilization(d,args.width,args.height)
-       
+        write_data("data{}.out".format(j),utilization, schedules, latencies)
         # plt.scatter( utilization , [ x/y if y != 0 else 0 for x,y in zip(ref_latency,latencies)] , color = colors[j], label=labels[j] , marker=markers[j])
         ax1.scatter( [ x/y if y != 0 else 0 for x,y in zip(utilization,ref_utilization)] , [ x/y if y != 0 else 0 for x,y in zip(ref_latency,latencies)] , color = colors[j], label=labels[j] , marker=markers[j])
         ax2.scatter([ x/y if y != 0 else 0 for x,y in zip(schedules,ref_schedules)] , [ x/y if y != 0 else 0 for x,y in zip(ref_latency,latencies)] , color = colors[j], label=labels[j] , marker=markers[j])
