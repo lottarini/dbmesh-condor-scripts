@@ -1,0 +1,2 @@
+#!/bin/bash
+python ~/DBMESH/db-mesh/sql_compiler/dse.py ~/DBMESH/db-mesh ~/DBMESH/db-mesh/data/sf001_logs/ 5 $1

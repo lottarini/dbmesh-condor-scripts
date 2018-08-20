@@ -1,0 +1,10 @@
+*.pdf
+*~
+DSE_*
+Q100_DSE*
+*.png
+*.pyc
+./db-mesh
+OLD
+*.csv
+#*

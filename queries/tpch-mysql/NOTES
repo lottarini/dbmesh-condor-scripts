@@ -1,0 +1,2 @@
+Queries that run on Monet don't run (exactly, without mods) on mysql.  Mostly the issue is syntax.  These queries from: http://www.pilhokim.com/index.php?title=Project/EFIM/TPC-H_default_queries
+

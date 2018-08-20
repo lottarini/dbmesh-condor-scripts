@@ -72,8 +72,12 @@ def analyze_stats(stat_file):
             query_latency += directive_latency
             assert  values[2] == values[3] 
             try:
-                tile_utilization +=  int(values[6])  * directive_latency
-                noc_utilization  +=  ( int(values[7]) + int(values[6]) )* directive_latency # clock cycles in which the routers are active
+                if int(values[6]) <= int(values[7]):
+                    tile_utilization +=  int(values[6])  * directive_latency
+                    noc_utilization  +=  ( int(values[7]) ) * directive_latency # clock cycles in which the routers are active
+                else:
+                    tile_utilization += 0
+                    noc_utilization  += 0                    
             except:
                 noc_utilization  = 0
                 tile_utilization = 0
@@ -89,7 +93,8 @@ if __name__ == "__main__":
     area_used = [[] for i in range(19)] # how much area is used for each query by the different systems
     area_lost_unbalance = [[] for i in range(19)] # how much area is lost by co-scheduling things with different latency
     area_lost_unused = [[] for i in range(19)] # how much area is not necessary
-    
+    area_perf_by_query = []
+    power_perf_by_query = []
     for d in os.listdir("."):
         if len(sys.argv) == 2:
             assert sys.argv[1] in ["REAL","DUMB"]
@@ -106,11 +111,15 @@ if __name__ == "__main__":
             for i in range(len(tile_precise_cycles)):
                 if latencies[i] > 0 and tile_precise_cycles[i] > 0:
                     area_used[i].append(tile_precise_cycles[i]/(float(width*depth)*latencies[i]))
-                    assert tile_cycles[i] >= tile_precise_cycles[i]
+                    try:
+                        assert tile_cycles[i] >= tile_precise_cycles[i]
+                    except:
+                        pdb.set_trace()
                     area_lost_unbalance[i].append( (tile_cycles[i]-tile_precise_cycles[i]) / (float(width*depth)*latencies[i]) )
                     area_lost_unused[i].append( ( (float(width*depth)*latencies[i]) - tile_cycles[i]) / (float(width*depth)*latencies[i]) )
 
             if latencies is not None and 0 not in latencies:
+                area_perf_by_query.append([area]+[ x* float( 1.0 / float(freq * 1000) ) for x in latencies])
                 cc_geomean = scipy.stats.gmean(latencies)
                 geomean = cc_geomean * float( 1.0 / float(freq * 1000) )
                 latency = sum(latencies) * float( 1.0 / float(freq * 1000) ) # normalize to ms instead of sec
@@ -118,10 +127,10 @@ if __name__ == "__main__":
                     continue
                     #pdb.set_trace()
                     
-                if all([ x > 0 for x in tile_cycles ]): # in some cases I re-ran a few queries so not all have utilization info
+                if all([ x > 0 for x in tile_precise_cycles ]): # in some cases I re-ran a few queries so not all have utilization info
                     router_utilization = float(sum(router_cycles)) / sum(latencies)
                     #tile_utilization   = float(sum(tile_precise_cycles)) / sum(latencies)
-                    tile_utilization = float(sum(tile_cycles)) / sum(latencies)
+                    tile_utilization = float(sum(tile_precise_cycles)) / sum(latencies)
 
                     assert router_utilization < width*depth
                     assert tile_utilization < width * depth
@@ -129,6 +138,8 @@ if __name__ == "__main__":
                     dyn_compute_pwr    = dbmesh_dynamic_pwr * tile_utilization
                     static_comm_pwr    = width*depth*router_static_pwr
                     dynamic_comm_pwr   = router_utilization * router_dynamic_pwr
+                    total_pwr = static_compute_pwr + dyn_compute_pwr + static_comm_pwr + dynamic_comm_pwr
+                    power_perf_by_query.append([total_pwr]+[ x* float( 1.0 / float(freq * 1000) ) for x in latencies])
                 else:
                     router_utilization = 0
                     tile_utilization   = 0
@@ -164,11 +175,20 @@ if __name__ == "__main__":
     ax2.set_ylim([0,1])
     fig2.savefig("dbmesh_area_lost_unused.pdf")
 
+    # DUMP THE BY-QUERY DATA
+    with open("dbmesh.area.perf.byquery.csv",'w') as f:
+        for row in area_perf_by_query:
+            f.write(",".join([str(x) for x in row])+"\n")
+    with open("dbmesh.power.perf.byquery.csv",'w') as f:
+        for row in power_perf_by_query:
+            f.write(",".join([str(x) for x in row])+"\n")
+    
+    
     # DUMP THE CSV
     csvs = {"dbmesh_area_lost_unused.csv":area_lost_unused,
+                "dbmesh_area_used.csv":area_used,
             "dbmesh_area_lost_unbalance.csv":area_lost_unbalance
                 }
-        
     
     for k,v in csvs.items():
         with open(k,'w') as f:
